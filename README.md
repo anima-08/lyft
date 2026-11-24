@@ -9,7 +9,7 @@ The frontend is deployed on Vercel, and the backend is live on Render with a per
 | Deliverable | URL / status |
 | --- | --- |
 | Frontend | https://frontend-anima24.vercel.app (Vercel deployment protection currently requires a login) |
-| Backend | https://lyftr-ai-backend.onrender.com |
+| Backend | https://lyft-vyvx.onrender.com |
 | Public GitHub repository | https://github.com/anima-08/lyft |
 | Demo video | Pending recording of the deployed app |
 
@@ -25,7 +25,7 @@ Render is used instead of Vercel because this app stores required conversation h
    - `LLM_API_KEYS`: two or more real provider keys, separated by commas.
    - `ALLOWED_ORIGINS` is preset to `https://frontend-anima24.vercel.app` plus localhost origins; change it if the frontend uses a custom domain.
 4. Apply the Blueprint and wait for the first deploy. The configuration fixes `DATABASE_URL=sqlite:////data/app.db`, enables failure simulation, uses one instance, and checks `/health`.
-5. The production frontend defaults to `https://lyftr-ai-backend.onrender.com`. If using a different backend URL, set `VITE_API_BASE_URL` in Vercel for Production and redeploy the frontend.
+5. The production frontend defaults to `https://lyft-vyvx.onrender.com`. If using a different backend URL, set `VITE_API_BASE_URL` in Vercel for Production and redeploy the frontend.
 6. Open `<backend-url>/health` and confirm it returns `status: "ok"`, then test chat, cache hits, failover, and history through the Vercel app.
 
 The Render disk is paid and limited to one service instance. Render briefly stops the old instance during a disk-backed redeploy to protect SQLite from simultaneous writers. Never put real keys in Git or send them in chat; enter them only in Render's environment settings.
