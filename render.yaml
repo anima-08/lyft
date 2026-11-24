@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: lyftr-ai-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: 0.5c-512mb
+    numInstances: 1
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: LLM_API_KEYS
+        sync: false
+      - key: LLM_MODEL
+        value: gemini/gemini-2.5-flash
+      - key: DATABASE_URL
+        value: sqlite:////data/app.db
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: ENABLE_FAILURE_SIMULATION
+        value: "true"
+      - key: DEFAULT_SYSTEM_PROMPT
+        value: "You are Lyftr AI, a thoughtful and concise assistant. Use the conversation history to answer follow-up questions. If you are uncertain, say so clearly."
+      - key: CACHE_TTL_SECONDS
+        value: "3600"
+      - key: REQUEST_TIMEOUT_SECONDS
+        value: "45"
+      - key: MAX_OUTPUT_TOKENS
+        value: "1024"
+      - key: TEMPERATURE
+        value: "0.2"
+      - key: PORT
+        value: "8000"
+    disk:
+      name: lyftr-sqlite
+      mountPath: /data
+      sizeGB: 1

@@ -4,16 +4,29 @@ A full-stack, multi-turn AI chatbot built with React, FastAPI, LiteLLM, and SQLi
 
 ## 1. Live URLs
 
-Deployment has not been completed because provider API keys and hosting credentials were not supplied with the assignment.
+The frontend is deployed on Vercel. The backend is prepared for Render with a persistent disk; deployment is pending connection of the Render account and entry of the real provider keys.
 
 | Deliverable | URL / status |
 | --- | --- |
-| Frontend | Pending deployment |
-| Backend | Pending deployment |
+| Frontend | Deployed on Vercel: https://vercel.com/anima24/frontend (add the public app URL before submission) |
+| Backend | Render Blueprint ready: `render.yaml` (pending Render setup) |
 | Public GitHub repository | https://github.com/anima-08/lyft |
 | Demo video | Pending recording of the deployed app |
 
-To deploy the backend, use a Docker host with a persistent disk mounted at `/data` (Render and Railway both support this). Set all variables from `.env.example`, use `sqlite:////data/app.db`, and keep `ENABLE_FAILURE_SIMULATION=true`. Then deploy the frontend with `frontend` as the project root, `npm run build` as the build command, `dist` as the output directory, and `VITE_API_BASE_URL` set to the public backend URL. Add the final frontend URL to `ALLOWED_ORIGINS` and rebuild the frontend if its API URL changes.
+### Deploy the backend on Render
+
+Render is used instead of Vercel because this app stores required conversation history in SQLite. Vercel Functions provide only temporary local storage, while Render can mount a persistent disk at `/data`.
+
+1. In the [Render Dashboard](https://dashboard.render.com), select **New → Blueprint** and connect the `anima-08/lyft` repository on branch `main`.
+2. Render detects [`render.yaml`](render.yaml). Review the `lyftr-ai-backend` Docker service, its paid `0.5c-512mb` plan, and its 1 GB disk mounted at `/data`.
+3. When prompted, enter:
+   - `LLM_API_KEYS`: two or more real provider keys, separated by commas.
+   - `ALLOWED_ORIGINS`: the exact public Vercel frontend origin, such as `https://your-app.vercel.app`, with no trailing slash.
+4. Apply the Blueprint and wait for the first deploy. The configuration fixes `DATABASE_URL=sqlite:////data/app.db`, enables failure simulation, uses one instance, and checks `/health`.
+5. After the service is live, copy its public `https://…onrender.com` URL. In the Vercel frontend project, set `VITE_API_BASE_URL` to that URL for Production and redeploy the frontend.
+6. Open `<backend-url>/health` and confirm it returns `status: "ok"`, then test chat, cache hits, failover, and history through the Vercel app.
+
+The Render disk is paid and limited to one service instance. Render briefly stops the old instance during a disk-backed redeploy to protect SQLite from simultaneous writers. Never put real keys in Git or send them in chat; enter them only in Render's environment settings.
 
 No real keys, `.env` files, or credentials belong in the repository.
 
