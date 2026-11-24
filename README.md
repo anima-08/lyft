@@ -4,14 +4,16 @@ A full-stack, multi-turn AI chatbot built with React, FastAPI, LiteLLM, and SQLi
 
 ## 1. Live URLs
 
-The frontend is deployed on Vercel. The backend is prepared for Render with a persistent disk; deployment is pending connection of the Render account and entry of the real provider keys.
+The frontend is deployed on Vercel, and the backend is live on Render with a persistent disk. Vercel Deployment Protection must be disabled for the frontend to be publicly accessible without a Vercel login.
 
 | Deliverable | URL / status |
 | --- | --- |
-| Frontend | Deployed on Vercel: https://vercel.com/anima24/frontend (add the public app URL before submission) |
-| Backend | Render Blueprint ready: `render.yaml` (pending Render setup) |
+| Frontend | https://frontend-anima24.vercel.app (Vercel deployment protection currently requires a login) |
+| Backend | https://lyftr-ai-backend.onrender.com |
 | Public GitHub repository | https://github.com/anima-08/lyft |
 | Demo video | Pending recording of the deployed app |
+
+In the Vercel frontend project, open **Settings → Deployment Protection** and disable production deployment protection (or otherwise permit public visitors), then redeploy the latest `main` commit.
 
 ### Deploy the backend on Render
 
@@ -21,9 +23,9 @@ Render is used instead of Vercel because this app stores required conversation h
 2. Render detects [`render.yaml`](render.yaml). Review the `lyftr-ai-backend` Docker service, its paid `0.5c-512mb` plan, and its 1 GB disk mounted at `/data`.
 3. When prompted, enter:
    - `LLM_API_KEYS`: two or more real provider keys, separated by commas.
-   - `ALLOWED_ORIGINS`: the exact public Vercel frontend origin, such as `https://your-app.vercel.app`, with no trailing slash.
+   - `ALLOWED_ORIGINS` is preset to `https://frontend-anima24.vercel.app` plus localhost origins; change it if the frontend uses a custom domain.
 4. Apply the Blueprint and wait for the first deploy. The configuration fixes `DATABASE_URL=sqlite:////data/app.db`, enables failure simulation, uses one instance, and checks `/health`.
-5. After the service is live, copy its public `https://…onrender.com` URL. In the Vercel frontend project, set `VITE_API_BASE_URL` to that URL for Production and redeploy the frontend.
+5. The production frontend defaults to `https://lyftr-ai-backend.onrender.com`. If using a different backend URL, set `VITE_API_BASE_URL` in Vercel for Production and redeploy the frontend.
 6. Open `<backend-url>/health` and confirm it returns `status: "ok"`, then test chat, cache hits, failover, and history through the Vercel app.
 
 The Render disk is paid and limited to one service instance. Render briefly stops the old instance during a disk-backed redeploy to protect SQLite from simultaneous writers. Never put real keys in Git or send them in chat; enter them only in Render's environment settings.

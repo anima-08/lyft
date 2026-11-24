@@ -16,7 +16,7 @@ services:
       - key: DATABASE_URL
         value: sqlite:////data/app.db
       - key: ALLOWED_ORIGINS
-        sync: false
+        value: https://frontend-anima24.vercel.app,http://localhost:3000,http://127.0.0.1:3000
       - key: ENABLE_FAILURE_SIMULATION
         value: "true"
       - key: DEFAULT_SYSTEM_PROMPT

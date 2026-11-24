@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/+$/, "");
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.PROD ? "https://lyftr-ai-backend.onrender.com" : "http://localhost:8000")
+).replace(/\/+$/, "");
 
 const STARTER_PROMPTS = [
   { title: "Explain a concept", text: "Explain how API key failover works in simple terms.", icon: "spark" },
