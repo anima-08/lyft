@@ -28,6 +28,8 @@ Render is used instead of Vercel because this app stores required conversation h
 
 The Render disk is paid and limited to one service instance. Render briefly stops the old instance during a disk-backed redeploy to protect SQLite from simultaneous writers. Never put real keys in Git or send them in chat; enter them only in Render's environment settings.
 
+Render builds from the repository-root [`Dockerfile`](Dockerfile); local Compose continues to use [`backend/Dockerfile`](backend/Dockerfile).
+
 No real keys, `.env` files, or credentials belong in the repository.
 
 ## 2. Run locally: with Docker and without
@@ -55,7 +57,7 @@ Requirements: Docker with Compose v2.24+ and Make.
 
 4. Stop the services with `make down`. The named `sqlite_data` volume retains `/data/app.db` across container restarts. `make down` does not delete that volume.
 
-The frontend production image serves the Vite build through Nginx. Both Dockerfiles use multi-stage builds; the backend runtime uses a Python virtual environment and a non-root user, and the frontend runtime contains only Nginx and static assets.
+The frontend production image serves the Vite build through Nginx. The Dockerfiles use multi-stage builds; the backend runtime uses a Python virtual environment and a non-root user, and the frontend runtime contains only Nginx and static assets.
 
 ### Without Docker
 
