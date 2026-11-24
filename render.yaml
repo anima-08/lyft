@@ -3,8 +3,8 @@ services:
     name: lyftr-ai-backend
     runtime: docker
     rootDir: backend
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     plan: 0.5c-512mb
     numInstances: 1
     healthCheckPath: /health
