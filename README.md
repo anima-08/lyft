@@ -4,16 +4,16 @@ A full-stack, multi-turn AI chatbot built with React, FastAPI, LiteLLM, and SQLi
 
 ## 1. Live URLs
 
-The frontend is deployed on Vercel, and the backend is live on Render with a persistent disk. Vercel Deployment Protection must be disabled for the frontend to be publicly accessible without a Vercel login.
+The frontend is deployed on Vercel and the backend is live on Render with a persistent disk. Both are publicly reachable, and a chat sent from the deployed frontend returns live inference metadata from the backend.
 
 | Deliverable | URL / status |
 | --- | --- |
-| Frontend | https://frontend-anima24.vercel.app (Vercel deployment protection currently requires a login) |
+| Frontend | https://frontend-anima24.vercel.app |
 | Backend | https://lyft-vyvx.onrender.com |
 | Public GitHub repository | https://github.com/anima-08/lyft |
 | Demo video | Pending recording of the deployed app |
 
-In the Vercel frontend project, open **Settings → Deployment Protection** and disable production deployment protection (or otherwise permit public visitors), then redeploy the latest `main` commit.
+Vercel **Settings → Deployment Protection** must stay off for Production, otherwise visitors are redirected to a Vercel login instead of the app.
 
 ### Deploy the backend on Render
 
