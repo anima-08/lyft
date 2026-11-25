@@ -209,6 +209,7 @@ Or run `cd backend && python -m pytest` and `cd frontend && npm test` separately
 ## 6. Bonus features (if any): what you added beyond the requirements and why
 
 - Optional per-session system prompt with persistence, so follow-up requests retain custom instructions.
+- Browser-local recent-chat list with SQLite history reopening, an open-by-session-ID fallback, and a manual New chat control. A page reload still starts a fresh session as required; previous chats from the same browser appear in the sidebar, and older chats can be reopened with their copied session ID.
 - Session-ID copy control and responsive desktop/mobile layouts.
 - Visible request states, keyboard controls, accessible errors, and reduced-motion support.
 - Bounded, TTL-controlled LiteLLM in-memory caching with no external datastore.

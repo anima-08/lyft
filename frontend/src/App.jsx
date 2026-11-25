@@ -5,6 +5,9 @@ const API_BASE_URL = (
   (import.meta.env.PROD ? "https://lyft-vyvx.onrender.com" : "http://localhost:8000")
 ).replace(/\/+$/, "");
 
+const HISTORY_STORAGE_KEY = "lyftr-ai-chat-history-v1";
+const HISTORY_LIMIT = 12;
+
 const STARTER_PROMPTS = [
   { title: "Explain a concept", text: "Explain how API key failover works in simple terms.", icon: "spark" },
   { title: "Plan something", text: "Help me plan a focused two-hour study session.", icon: "list" },
@@ -14,6 +17,37 @@ const STARTER_PROMPTS = [
 function createSessionId() {
   const randomPart = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return `s-${randomPart}`;
+}
+
+function chatTitle(message) {
+  return message.length > 52 ? `${message.slice(0, 51)}…` : message;
+}
+
+function loadRecentChats() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || "[]");
+    if (!Array.isArray(stored)) return [];
+    return stored
+      .filter((chat) => (
+        chat
+        && typeof chat.id === "string"
+        && chat.id.length <= 128
+        && typeof chat.title === "string"
+        && typeof chat.updated_at === "string"
+        && !Number.isNaN(Date.parse(chat.updated_at))
+      ))
+      .slice(0, HISTORY_LIMIT);
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentChats(chats) {
+  try {
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(chats));
+  } catch {
+    return;
+  }
 }
 
 function SparkIcon() {
@@ -78,13 +112,75 @@ function readableError(payload, status) {
   return detail || `The server returned HTTP ${status}. Please try again.`;
 }
 
+function RecentChats({ chats, activeId, busy, onOpen, onNew, onOpenById, idLookup, onIdLookupChange }) {
+  return (
+    <section className="history-section" aria-label="Previous chats" data-testid="history-section">
+      <div className="history-heading">
+        <span>PREVIOUS CHATS</span>
+        <button type="button" onClick={onNew} disabled={busy} data-testid="new-chat-button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+          New chat
+        </button>
+      </div>
+      {chats.length > 0 ? (
+        <div className="history-list">
+          {chats.map((chat) => (
+            <button
+              className={`history-item${chat.id === activeId ? " active" : ""}`}
+              type="button"
+              key={chat.id}
+              onClick={() => onOpen(chat.id)}
+              disabled={busy}
+              aria-current={chat.id === activeId ? "page" : undefined}
+              data-testid="history-item"
+            >
+              <span className="history-item-title">{chat.title}</span>
+              <span className="history-item-date">
+                {new Date(chat.updated_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="history-empty">Your completed chats will appear here.</p>
+      )}
+      <form
+        className="history-lookup"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onOpenById(idLookup);
+        }}
+      >
+        <label htmlFor="history-session-id">Open a saved chat</label>
+        <div>
+          <input
+            id="history-session-id"
+            value={idLookup}
+            onChange={(event) => onIdLookupChange(event.target.value)}
+            placeholder="Session ID"
+            maxLength={128}
+            disabled={busy}
+            data-testid="history-session-input"
+          />
+          <button type="submit" disabled={busy || !idLookup.trim()} data-testid="history-open-button">Open</button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
 export default function App() {
-  const [sessionId] = useState(createSessionId);
+  const [sessionId, setSessionId] = useState(createSessionId);
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [pending, setPending] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [recentChats, setRecentChats] = useState(loadRecentChats);
+  const [idLookup, setIdLookup] = useState("");
+  const [historyPending, setHistoryPending] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
   const conversationEnd = useRef(null);
   const inputRef = useRef(null);
 
@@ -94,13 +190,31 @@ export default function App() {
     }
   }, [messages, pending]);
 
+  function rememberChat(text, prompt) {
+    setRecentChats((current) => {
+      const existing = current.find((chat) => chat.id === sessionId);
+      const next = [
+        {
+          id: sessionId,
+          title: existing?.title || chatTitle(text),
+          updated_at: new Date().toISOString(),
+          system_prompt: prompt,
+        },
+        ...current.filter((chat) => chat.id !== sessionId),
+      ].slice(0, HISTORY_LIMIT);
+      saveRecentChats(next);
+      return next;
+    });
+  }
+
   async function sendMessage(overrideText) {
     const text = (overrideText ?? chatInput).trim();
-    if (!text || pending) return;
+    if (!text || pending || historyPending) return;
 
     setChatInput("");
     setMessages((current) => [...current, { role: "user", content: text }]);
     setPending(true);
+    setHistoryError("");
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 65000);
@@ -124,6 +238,7 @@ export default function App() {
         ...current,
         { role: "assistant", content: payload.reply, metadata: payload.metadata },
       ]);
+      rememberChat(text, prompt);
     } catch (error) {
       const message = error.name === "AbortError"
         ? "The request timed out. Please try again."
@@ -133,6 +248,62 @@ export default function App() {
       clearTimeout(timeout);
       setPending(false);
       inputRef.current?.focus();
+    }
+  }
+
+  function startNewChat() {
+    if (pending || historyPending) return;
+    setSessionId(createSessionId());
+    setMessages([]);
+    setChatInput("");
+    setSystemPrompt("");
+    setCopied(false);
+    setHistoryError("");
+    setHistoryOpen(false);
+    setIdLookup("");
+    inputRef.current?.focus();
+  }
+
+  async function openSession(rawId) {
+    const id = rawId.trim();
+    if (!id || id.length > 128 || pending || historyPending) return;
+    if (id === sessionId) {
+      setIdLookup("");
+      setHistoryError("");
+      setHistoryOpen(false);
+      return;
+    }
+
+    setHistoryPending(true);
+    setHistoryError("");
+    setHistoryOpen(false);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/sessions/${encodeURIComponent(id)}/messages`, {
+        signal: controller.signal,
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(readableError(payload, response.status));
+      if (!Array.isArray(payload?.messages)) throw new Error("The server returned invalid chat history.");
+
+      setSessionId(id);
+      setMessages(payload.messages);
+      setSystemPrompt(recentChats.find((chat) => chat.id === id)?.system_prompt || "");
+      setChatInput("");
+      setCopied(false);
+      setIdLookup("");
+      setHistoryOpen(false);
+      inputRef.current?.focus();
+    } catch (error) {
+      const message = error.name === "AbortError"
+        ? "Loading this chat timed out. Please try again."
+        : error.message || "Unable to load this chat. Please try again.";
+      setHistoryError(message);
+    } finally {
+      clearTimeout(timeout);
+      setHistoryPending(false);
     }
   }
 
@@ -160,21 +331,45 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar${historyOpen ? " history-open" : ""}`}>
         <a className="brand" href="/" aria-label="Lyftr AI home">
           <span className="brand-mark"><SparkIcon /></span>
           <span>Lyftr<span className="brand-ai">AI</span></span>
         </a>
+        <button
+          className="mobile-history-toggle"
+          type="button"
+          onClick={() => setHistoryOpen((open) => !open)}
+          aria-expanded={historyOpen}
+          aria-controls="chat-history"
+          data-testid="history-toggle"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5M12 7v5l3 2" /></svg>
+          Chats
+        </button>
 
         <div className="workspace-label">YOUR WORKSPACE</div>
         <div className="session-card">
           <div className="session-heading">
             <span className="session-icon">L</span>
-            <div><strong>Current conversation</strong><span><i />New session</span></div>
+            <div><strong>Current conversation</strong><span><i />{messages.length > 0 ? "Saved chat" : "New session"}</span></div>
           </div>
           <button className="session-id" type="button" onClick={copySessionId} title="Copy session ID">
             <span>{sessionId.slice(0, 18)}…</span><span>{copied ? "Copied" : "Copy ID"}</span>
           </button>
+        </div>
+
+        <div id="chat-history" className="history-wrapper">
+          <RecentChats
+            chats={recentChats}
+            activeId={sessionId}
+            busy={pending || historyPending}
+            onOpen={(id) => void openSession(id)}
+            onNew={startNewChat}
+            onOpenById={(id) => void openSession(id)}
+            idLookup={idLookup}
+            onIdLookupChange={setIdLookup}
+          />
         </div>
 
         <div className="prompt-settings">
@@ -207,7 +402,13 @@ export default function App() {
         </header>
 
         <section className="conversation" aria-live="polite" aria-label="Conversation">
-          {messages.length === 0 && (
+          {historyError && (
+            <div className="history-error" role="alert">
+              <strong>Couldn’t load this chat</strong><p>{historyError}</p>
+            </div>
+          )}
+          {historyPending && <div className="history-loading" role="status">Loading saved conversation…</div>}
+          {messages.length === 0 && !historyPending && !historyError && (
             <div className="welcome">
               <div className="welcome-mark"><SparkIcon /></div>
               <span className="eyebrow">A SMARTER WAY TO CHAT</span>
@@ -272,7 +473,7 @@ export default function App() {
               placeholder="Message Lyftr AI…"
               aria-label="Message Lyftr AI"
             />
-            <button data-testid="send-button" type="submit" disabled={!chatInput.trim() || pending} aria-label="Send message">
+            <button data-testid="send-button" type="submit" disabled={!chatInput.trim() || pending || historyPending} aria-label="Send message">
               <ArrowIcon />
             </button>
           </form>

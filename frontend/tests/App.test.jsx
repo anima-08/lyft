@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../src/App";
 
 const successResponse = {
@@ -25,6 +25,10 @@ function jsonResponse(body, status = 200) {
 }
 
 describe("Lyftr AI chat", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it("sends a message and shows every required response metadata field", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(successResponse));
@@ -87,6 +91,81 @@ describe("Lyftr AI chat", () => {
       message: "And its population?",
       system_prompt: "Answer concisely.",
     });
+  });
+
+  it("lists a successful chat after reload and reopens its SQLite history", async () => {
+    const user = userEvent.setup();
+    const firstSession = JSON.parse(JSON.stringify(successResponse));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(firstSession))
+      .mockResolvedValueOnce(jsonResponse({
+        session_id: "s-test",
+        messages: [
+          { role: "user", content: "What is the capital of France?" },
+          { role: "assistant", content: "The capital of France is Paris.", metadata: firstSession.metadata },
+        ],
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const first = render(<App />);
+    await user.type(screen.getByTestId("system-prompt-input"), "Answer concisely.");
+    await user.type(screen.getByTestId("chat-input"), "What is the capital of France?");
+    await user.click(screen.getByTestId("send-button"));
+    await screen.findByTestId("assistant-message");
+    const sessionId = JSON.parse(fetchMock.mock.calls[0][1].body).session_id;
+    expect(screen.getByTestId("history-item")).toHaveTextContent("What is the capital of France?");
+    first.unmount();
+
+    render(<App />);
+    expect(screen.queryByTestId("assistant-message")).not.toBeInTheDocument();
+    await user.click(screen.getByTestId("history-item"));
+
+    expect(await screen.findByTestId("assistant-message")).toHaveTextContent("The capital of France is Paris.");
+    expect(screen.getByText("What is the capital of France?", { selector: ".user-message p" })).toBeInTheDocument();
+    expect(screen.getByTestId("system-prompt-input")).toHaveValue("Answer concisely.");
+    expect(fetchMock.mock.calls[1][0]).toContain(`/sessions/${sessionId}/messages`);
+    expect(fetchMock.mock.calls[1][1].method).toBeUndefined();
+  });
+
+  it("opens an older chat by session ID and reports missing history", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ session_id: "s-old", messages: [] }))
+      .mockResolvedValueOnce(jsonResponse({ detail: "session not found" }, 404));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+
+    await user.type(screen.getByTestId("history-session-input"), "s-old");
+    await user.click(screen.getByTestId("history-open-button"));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0][0]).toContain("/sessions/s-old/messages");
+
+    await user.type(screen.getByTestId("history-session-input"), "s-missing");
+    await user.click(screen.getByTestId("history-open-button"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("session not found");
+  });
+
+  it("creates another fresh session without clearing the previous-chat list", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(successResponse)));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+
+    await user.type(screen.getByTestId("chat-input"), "First chat");
+    await user.click(screen.getByTestId("send-button"));
+    await screen.findByTestId("assistant-message");
+    const firstId = JSON.parse(fetchMock.mock.calls[0][1].body).session_id;
+
+    await user.click(screen.getByTestId("new-chat-button"));
+    expect(screen.queryByTestId("assistant-message")).not.toBeInTheDocument();
+    expect(screen.getByTestId("history-item")).toHaveTextContent("First chat");
+    await user.type(screen.getByTestId("chat-input"), "Second chat");
+    await user.click(screen.getByTestId("send-button"));
+    await screen.findByTestId("assistant-message");
+
+    const secondId = JSON.parse(fetchMock.mock.calls[1][1].body).session_id;
+    expect(secondId).not.toBe(firstId);
+    expect(screen.getAllByTestId("history-item")).toHaveLength(2);
   });
 
   it("starts a fresh session after a page reload simulation", async () => {
