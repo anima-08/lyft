@@ -15,8 +15,10 @@ services:
         value: gemini/gemini-3.5-flash-lite
       - key: DATABASE_URL
         value: sqlite:////data/app.db
+      # Every frontend origin that may call /chat. A missing origin shows up in
+      # the browser as "Failed to fetch", never as a backend error.
       - key: ALLOWED_ORIGINS
-        value: https://frontend-anima24.vercel.app,http://localhost:3000,http://127.0.0.1:3000
+        value: https://frontend-anima24.vercel.app,https://lyftr-ai-frontend-tawny.vercel.app,http://localhost:3000,http://127.0.0.1:3000
       - key: ENABLE_FAILURE_SIMULATION
         value: "true"
       - key: DEFAULT_SYSTEM_PROMPT

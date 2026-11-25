@@ -4,7 +4,7 @@ A full-stack, multi-turn AI chatbot built with React, FastAPI, LiteLLM, and SQLi
 
 ## 1. Live URLs
 
-The frontend is deployed on Vercel and the backend is live on Render with a persistent disk. Both are publicly reachable, and a chat sent from the deployed frontend returns live inference metadata from the backend.
+The frontend is deployed on Vercel and the backend is live on Render. Both are publicly reachable, and a chat sent from the deployed frontend returns live inference metadata from the backend.
 
 | Deliverable | URL / status |
 | --- | --- |
@@ -20,15 +20,17 @@ Vercel **Settings → Deployment Protection** must stay off for Production, othe
 Render is used instead of Vercel because this app stores required conversation history in SQLite. Vercel Functions provide only temporary local storage, while Render can mount a persistent disk at `/data`.
 
 1. In the [Render Dashboard](https://dashboard.render.com), select **New → Blueprint** and connect the `anima-08/lyft` repository on branch `main`.
-2. Render detects [`render.yaml`](render.yaml). Review the `lyftr-ai-backend` Docker service, its paid `0.5c-512mb` plan, and its 1 GB disk mounted at `/data`.
+2. Render detects [`render.yaml`](render.yaml). Review the `lyftr-ai-backend` Docker service and its instance type, then add a disk mounted at `/data` if the plan offers one.
 3. When prompted, enter:
    - `LLM_API_KEYS`: two or more real provider keys, separated by commas.
-   - `ALLOWED_ORIGINS` is preset to `https://frontend-anima24.vercel.app` plus localhost origins; change it if the frontend uses a custom domain.
+   - `ALLOWED_ORIGINS`: every frontend origin that may call the API. [`render.yaml`](render.yaml) presets the deployed Vercel domains plus localhost; a missing origin fails in the browser as `Failed to fetch`.
 4. Apply the Blueprint and wait for the first deploy. The configuration fixes `DATABASE_URL=sqlite:////data/app.db`, enables failure simulation, uses one instance, and checks `/health`.
 5. The production frontend defaults to `https://lyft-vyvx.onrender.com`. If using a different backend URL, set `VITE_API_BASE_URL` in Vercel for Production and redeploy the frontend.
 6. Open `<backend-url>/health` and confirm it returns `status: "ok"`, then test chat, cache hits, failover, and history through the Vercel app.
 
-The Render disk is paid and limited to one service instance. Render briefly stops the old instance during a disk-backed redeploy to protect SQLite from simultaneous writers. Never put real keys in Git or send them in chat; enter them only in Render's environment settings.
+The live service was created directly in the dashboard rather than linked as a Blueprint, so the **Environment Variables** shown in Render are authoritative: changing `ALLOWED_ORIGINS` here does not change the running service. Edit them in the dashboard and use **Manual Deploy → Deploy latest changes** to rebuild. Never put real keys in Git or send them in chat; enter them only in Render's environment settings.
+
+**Storage durability.** The Docker Compose stack mounts a named volume at `/data`, so `app.db` survives container restarts locally — this is the behaviour the assignment requires. A Render instance without an attached disk keeps `/data/app.db` only for the life of the instance: history and the LiteLLM cache are recreated after a redeploy or a long sleep, and `GET /sessions/{id}/messages` then returns `404 session not found` for older sessions. Attaching a Render disk at `/data` (paid, one instance) makes deployed history survive redeploys too.
 
 Render builds from the repository-root [`Dockerfile`](Dockerfile); local Compose continues to use [`backend/Dockerfile`](backend/Dockerfile).
 
