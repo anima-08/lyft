@@ -18,10 +18,12 @@ RUN groupadd --gid 10001 app && useradd --uid 10001 --gid app --create-home app 
     && mkdir -p /data && chown -R app:app /data
 COPY --from=builder /opt/venv /opt/venv
 COPY backend/app ./app
-# Numeric ids: Kubernetes-based hosts assign persistent-volume ownership from
-# the image's USER, and they cannot resolve a username.
-USER 10001:10001
+COPY backend/docker_entrypoint.py /usr/local/bin/docker_entrypoint.py
+# Start as root only to make a freshly mounted volume writable; the entrypoint
+# drops privileges before starting the application.
+USER root
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)" || exit 1
+ENTRYPOINT ["python", "/usr/local/bin/docker_entrypoint.py"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
