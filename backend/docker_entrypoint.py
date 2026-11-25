@@ -13,4 +13,5 @@ for path in (data_path, *data_path.rglob("*")):
 os.setgroups([])
 os.setgid(app_user.pw_gid)
 os.setuid(app_user.pw_uid)
+os.environ["HOME"] = app_user.pw_dir
 os.execvp(sys.argv[1], sys.argv[1:])
