@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     )
 
     llm_api_keys: Annotated[list[str], NoDecode] = Field(default_factory=list, validation_alias="LLM_API_KEYS")
-    llm_model: str = Field(default="gemini/gemini-2.5-flash", validation_alias="LLM_MODEL")
+    llm_model: str = Field(default="gemini/gemini-3.5-flash-lite", validation_alias="LLM_MODEL")
     database_url: str = Field(default="sqlite:////data/app.db", validation_alias="DATABASE_URL")
     allowed_origins: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["http://localhost:3000", "http://127.0.0.1:3000"],
@@ -24,8 +24,8 @@ class Settings(BaseSettings):
     enable_failure_simulation: bool = Field(default=True, validation_alias="ENABLE_FAILURE_SIMULATION")
     cache_ttl_seconds: int = Field(default=3600, ge=1, validation_alias="CACHE_TTL_SECONDS")
     request_timeout_seconds: float = Field(default=45.0, gt=0, validation_alias="REQUEST_TIMEOUT_SECONDS")
-    max_output_tokens: int = Field(default=1024, ge=1, validation_alias="MAX_OUTPUT_TOKENS")
-    temperature: float = Field(default=0.2, ge=0, le=2, validation_alias="TEMPERATURE")
+    max_output_tokens: int = Field(default=4096, ge=1, validation_alias="MAX_OUTPUT_TOKENS")
+    temperature: float | None = Field(default=None, ge=0, le=2, validation_alias="TEMPERATURE")
     default_system_prompt: str = Field(
         default=(
             "You are Lyftr AI, a thoughtful and concise assistant. "

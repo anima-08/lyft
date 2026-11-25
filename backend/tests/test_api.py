@@ -18,7 +18,7 @@ def test_multi_turn_history_and_per_response_metadata(client, provider_calls):
     assert first_data["reply"] == "A real provider answer."
     assert first_data["metadata"] == {
         "resolution_source": "LIVE_INFERENCE",
-        "model": "gemini/gemini-2.5-flash",
+        "model": "gemini/gemini-3.5-flash-lite",
         "latency_ms": first_data["metadata"]["latency_ms"],
         "input_tokens": 42,
         "output_tokens": 9,

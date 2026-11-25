@@ -8,7 +8,7 @@ const successResponse = {
   reply: "The capital of France is Paris.",
   metadata: {
     resolution_source: "LIVE_INFERENCE",
-    model: "gemini/gemini-2.5-flash",
+    model: "gemini/gemini-3.5-flash-lite",
     latency_ms: 812,
     input_tokens: 42,
     output_tokens: 9,
@@ -38,7 +38,7 @@ describe("Lyftr AI chat", () => {
     const reply = await screen.findByTestId("assistant-message");
     expect(reply).toHaveTextContent("The capital of France is Paris.");
     expect(screen.getByTestId("meta-source")).toHaveTextContent(/^LIVE_INFERENCE$/);
-    expect(screen.getByTestId("meta-model")).toHaveTextContent("gemini/gemini-2.5-flash");
+    expect(screen.getByTestId("meta-model")).toHaveTextContent("gemini/gemini-3.5-flash-lite");
     expect(screen.getByTestId("meta-latency")).toHaveTextContent("812 ms");
     expect(screen.getByTestId("meta-input-tokens")).toHaveTextContent(/^42$/);
     expect(screen.getByTestId("meta-output-tokens")).toHaveTextContent(/^9$/);

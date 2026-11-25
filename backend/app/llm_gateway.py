@@ -47,15 +47,7 @@ class LLMGateway:
                 continue
 
             try:
-                response = litellm.completion(
-                    model=self.settings.llm_model,
-                    messages=messages,
-                    api_key=api_key,
-                    temperature=self.settings.temperature,
-                    max_tokens=self.settings.max_output_tokens,
-                    timeout=self.settings.request_timeout_seconds,
-                    num_retries=0,
-                )
+                response = litellm.completion(**self._request_kwargs(messages, api_key))
                 reply = self._extract_reply(response)
                 input_tokens, output_tokens = self._extract_usage(response)
             except Exception as exc:
@@ -84,6 +76,20 @@ class LLMGateway:
             )
 
         raise AllProvidersUnavailable("all providers unavailable")
+
+    def _request_kwargs(self, messages: list[dict], api_key: str) -> dict:
+        kwargs = {
+            "model": self.settings.llm_model,
+            "messages": messages,
+            "api_key": api_key,
+            "max_tokens": self.settings.max_output_tokens,
+            "timeout": self.settings.request_timeout_seconds,
+            "num_retries": 0,
+        }
+        # Gemini 3 models reject the temperature parameter outright.
+        if self.settings.temperature is not None:
+            kwargs["temperature"] = self.settings.temperature
+        return kwargs
 
     @staticmethod
     def _extract_reply(response) -> str:

@@ -97,15 +97,15 @@ All configuration is environment-driven. `.env.example` lists every supported va
 | Variable | Purpose |
 | --- | --- |
 | `LLM_API_KEYS` | Comma-separated provider keys; IDs are assigned as `key_1`, `key_2`, etc. At least two are required. |
-| `LLM_MODEL` | LiteLLM model name; defaults to `gemini/gemini-2.5-flash`. |
+| `LLM_MODEL` | LiteLLM model name; defaults to `gemini/gemini-3.5-flash-lite`. |
 | `DATABASE_URL` | SQLite URL. Docker forces `sqlite:////data/app.db`. |
 | `ALLOWED_ORIGINS` | Comma-separated frontend origins allowed by CORS. |
 | `ENABLE_FAILURE_SIMULATION` | Enables `X-Simulate-Failure`; must be `true` on the deployed backend. |
 | `DEFAULT_SYSTEM_PROMPT` | Default instructions prepended to every model request. |
 | `CACHE_TTL_SECONDS` | In-memory cache lifetime; defaults to one hour. |
 | `REQUEST_TIMEOUT_SECONDS` | Per-provider request timeout. |
-| `MAX_OUTPUT_TOKENS` | Maximum completion tokens. |
-| `TEMPERATURE` | Sampling temperature. |
+| `MAX_OUTPUT_TOKENS` | Maximum response tokens; defaults to 4096 because Gemini 3 reasoning tokens count toward this limit. |
+| `TEMPERATURE` | Optional sampling temperature. Omitted by default because Gemini 3 models reject the parameter. |
 | `VITE_API_BASE_URL` | Backend base URL embedded in the frontend build. |
 | `BACKEND_PORT` / `FRONTEND_PORT` | Optional Docker host-port overrides. |
 
